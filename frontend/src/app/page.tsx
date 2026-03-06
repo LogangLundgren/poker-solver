@@ -25,6 +25,14 @@ export default function Home() {
       <div className="text-center space-y-4">
         <h1 className="text-5xl font-bold">Poker Solver</h1>
         <p className="text-gray-400 text-xl">Equity calculator — coming soon</p>
+        <div className="flex gap-3 justify-center mt-2">
+          <a
+            href="/range-builder"
+            className="px-4 py-2 bg-primary text-black font-medium rounded-md hover:bg-primary/80 transition-colors text-sm"
+          >
+            Range Builder
+          </a>
+        </div>
         {status === "loading" && (
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-full text-yellow-400 text-sm">
             <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
