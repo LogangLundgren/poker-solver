@@ -1,4 +1,4 @@
-"""Equity calculator supporting full enumeration and Monte Carlo simulation."""
+"""Equity calculator supporting NLHE and PLO (4/5/6 card) formats."""
 
 import random
 import time
@@ -12,19 +12,24 @@ from app.core.cards import (
     parse_hand,
 )
 from app.services.hand_evaluator import get_winner_indices
+from app.services.plo_evaluator import get_plo_winner_indices
 from app.services.range_parser import parse_range
+
+# Map format to number of hole cards
+FORMAT_HOLE_CARDS = {
+    "nlhe": 2,
+    "plo4": 4,
+    "plo5": 5,
+    "plo6": 6,
+}
 
 
 def _resolve_players(
     players: list[dict],
     board_ints: list[int],
+    num_hole_cards: int,
 ) -> tuple[list[list[list[int]]], list[int]]:
-    """Resolve each player to a list of possible hands (as treys ints).
-
-    Returns (player_hands, dead_cards) where:
-    - player_hands[i] is a list of [card1_int, card2_int] possibilities
-    - dead_cards are cards that cannot appear on the board
-    """
+    """Resolve each player to a list of possible hands (as treys ints)."""
     dead_cards: list[int] = list(board_ints)
     player_hands: list[list[list[int]]] = []
 
@@ -33,10 +38,12 @@ def _resolve_players(
         range_str = p.get("range")
 
         if hand_str:
-            hand_ints = parse_hand(hand_str)
+            hand_ints = parse_hand(hand_str, num_cards=num_hole_cards)
             player_hands.append([hand_ints])
             dead_cards.extend(hand_ints)
         elif range_str:
+            if num_hole_cards != 2:
+                raise ValueError("Range notation is only supported for NLHE")
             combos = parse_range(range_str)
             hands = []
             for c1, c2 in combos:
@@ -46,20 +53,6 @@ def _resolve_players(
             raise ValueError("Each player must have either 'hand' or 'range'")
 
     return player_hands, dead_cards
-
-
-def _is_exact_feasible(player_hands: list[list[list[int]]], board_to_deal: int) -> bool:
-    """Determine if full enumeration is feasible (small enough search space)."""
-    if len(player_hands) > 2:
-        return False
-    total_combos = 1
-    for ph in player_hands:
-        total_combos *= len(ph)
-    if total_combos > 500:
-        return False
-    if board_to_deal > 2:
-        return False
-    return True
 
 
 def calculate_equity(
@@ -75,38 +68,45 @@ def calculate_equity(
     players: list of dicts with 'hand' or 'range' keys
     board: optional list of board card strings
     iterations: Monte Carlo iterations (ignored for exact)
-    format: 'nlhe' or 'plo'
-
-    Returns
-    -------
-    dict with players (equity/wins/ties/losses), total_boards, method, iterations, elapsed_ms
+    format: 'nlhe', 'plo4', 'plo5', or 'plo6'
     """
     start = time.perf_counter()
+
+    num_hole_cards = FORMAT_HOLE_CARDS.get(format, 2)
+    is_plo = format in ("plo4", "plo5", "plo6")
 
     board_strs = board or []
     board_ints = parse_board(board_strs)
     cards_to_deal = 5 - len(board_ints)
 
-    player_hands, dead_cards = _resolve_players(players, board_ints)
+    player_hands, dead_cards = _resolve_players(players, board_ints, num_hole_cards)
 
-    # Use exact enumeration only for specific hands with ≤2 cards to deal
-    # (flop/turn/river). Preflop (5 cards to deal) = 1.7M combos = too slow.
+    # Choose winner function based on format
+    winner_fn = get_plo_winner_indices if is_plo else get_winner_indices
+
+    # PLO always uses Monte Carlo. NLHE uses exact when feasible.
     all_specific = all(len(ph) == 1 for ph in player_hands)
-    use_exact = all_specific and cards_to_deal <= 2 and len(players) <= 2
+    use_exact = (
+        not is_plo
+        and all_specific
+        and cards_to_deal <= 2
+        and len(players) <= 2
+    )
 
     if use_exact:
-        result = _enumerate_exact(player_hands, board_ints, dead_cards, cards_to_deal)
+        result = _enumerate_exact(player_hands, board_ints, cards_to_deal, winner_fn)
         method = "exact"
     else:
-        result = _monte_carlo(player_hands, board_ints, dead_cards, cards_to_deal, iterations)
+        result = _monte_carlo(
+            player_hands, board_ints, cards_to_deal, iterations, winner_fn
+        )
         method = "montecarlo"
 
     elapsed = (time.perf_counter() - start) * 1000
 
-    num_players = len(players)
     player_results = []
     total = result["total"]
-    for i in range(num_players):
+    for i in range(len(players)):
         wins = result["wins"][i]
         ties = result["ties"][i]
         losses = total - wins - ties
@@ -130,8 +130,8 @@ def calculate_equity(
 def _enumerate_exact(
     player_hands: list[list[list[int]]],
     board_ints: list[int],
-    dead_cards: list[int],
     cards_to_deal: int,
+    winner_fn: callable,
 ) -> dict:
     """Full enumeration for specific hands."""
     num_players = len(player_hands)
@@ -139,7 +139,6 @@ def _enumerate_exact(
     ties = [0] * num_players
     total = 0
 
-    # Each player has exactly 1 hand (specific cards)
     hands = [ph[0] for ph in player_hands]
     all_known = list(board_ints)
     for h in hands:
@@ -148,8 +147,7 @@ def _enumerate_exact(
     deck = get_available_deck(all_known)
 
     if cards_to_deal == 0:
-        # Board is complete
-        winner_idxs = get_winner_indices(hands, board_ints)
+        winner_idxs = winner_fn(hands, board_ints)
         total = 1
         if len(winner_idxs) == 1:
             wins[winner_idxs[0]] += 1
@@ -159,7 +157,7 @@ def _enumerate_exact(
     else:
         for combo in combinations(deck, cards_to_deal):
             full_board = board_ints + list(combo)
-            winner_idxs = get_winner_indices(hands, full_board)
+            winner_idxs = winner_fn(hands, full_board)
             total += 1
             if len(winner_idxs) == 1:
                 wins[winner_idxs[0]] += 1
@@ -173,43 +171,41 @@ def _enumerate_exact(
 def _monte_carlo(
     player_hands: list[list[list[int]]],
     board_ints: list[int],
-    dead_cards: list[int],
     cards_to_deal: int,
     iterations: int,
+    winner_fn: callable,
 ) -> dict:
-    """Monte Carlo simulation for ranges and multi-player scenarios."""
+    """Monte Carlo simulation for ranges, PLO, and multi-player scenarios."""
     num_players = len(player_hands)
     wins = [0] * num_players
     ties = [0] * num_players
     total = 0
-    rng = random.Random(42)  # Deterministic seed for reproducibility
+    rng = random.Random(42)
 
     for _ in range(iterations):
-        # Pick a specific hand for each range player
         chosen_hands: list[list[int]] = []
         used_cards: set[int] = set(board_ints)
         valid = True
 
         for ph in player_hands:
-            # Filter to hands that don't conflict with used cards
+            # Filter hands that don't conflict with used cards
             available = [
                 h for h in ph
-                if h[0] not in used_cards and h[1] not in used_cards
+                if all(c not in used_cards for c in h)
             ]
             if not available:
                 valid = False
                 break
             hand = rng.choice(available)
             chosen_hands.append(hand)
-            used_cards.add(hand[0])
-            used_cards.add(hand[1])
+            for c in hand:
+                used_cards.add(c)
 
         if not valid:
             continue
 
-        # Deal remaining board cards
         if cards_to_deal > 0:
-            deck = [c for c in get_available_deck(list(used_cards))]
+            deck = get_available_deck(list(used_cards))
             if len(deck) < cards_to_deal:
                 continue
             rng.shuffle(deck)
@@ -217,7 +213,7 @@ def _monte_carlo(
         else:
             full_board = board_ints
 
-        winner_idxs = get_winner_indices(chosen_hands, full_board)
+        winner_idxs = winner_fn(chosen_hands, full_board)
         total += 1
         if len(winner_idxs) == 1:
             wins[winner_idxs[0]] += 1

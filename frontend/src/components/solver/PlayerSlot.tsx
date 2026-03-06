@@ -12,8 +12,8 @@ const SUIT_SYMBOLS: Record<string, { symbol: string; color: string }> = {
 
 interface PlayerSlotProps {
   index: number;
-  hand: string | null;          // "AhKs" or null
-  range: string;                // range string
+  hand: string | null;
+  range: string;
   mode: "hand" | "range";
   onModeChange: (mode: "hand" | "range") => void;
   onHandChange: (hand: string | null) => void;
@@ -21,6 +21,8 @@ interface PlayerSlotProps {
   onRemove?: () => void;
   deadCards: Set<string>;
   equity?: number | null;
+  holeCards?: number;
+  disableRange?: boolean;
 }
 
 function MiniCard({ card }: { card: string }) {
@@ -38,18 +40,27 @@ function MiniCard({ card }: { card: string }) {
 export default function PlayerSlot({
   index, hand, range, mode, onModeChange, onHandChange,
   onRangeChange, onRemove, deadCards, equity,
+  holeCards = 2, disableRange = false,
 }: PlayerSlotProps) {
-  const [showPicker, setShowPicker] = useState<0 | 1 | null>(null);
+  const [showPicker, setShowPicker] = useState<number | null>(null);
 
-  const card1 = hand ? hand.slice(0, 2) : null;
-  const card2 = hand ? hand.slice(2, 4) : null;
-
-  const handleCardSelect = (slot: 0 | 1, card: string) => {
-    if (slot === 0) {
-      onHandChange(card + (card2 || ""));
+  // Parse existing cards from hand string
+  const cards: (string | null)[] = [];
+  for (let i = 0; i < holeCards; i++) {
+    const start = i * 2;
+    if (hand && start + 2 <= hand.length) {
+      cards.push(hand.slice(start, start + 2));
     } else {
-      onHandChange((card1 || "") + card);
+      cards.push(null);
     }
+  }
+
+  const handleCardSelect = (slot: number, card: string) => {
+    const newCards = [...cards];
+    newCards[slot] = card;
+    // Build hand string from all non-null cards in order
+    const handStr = newCards.map((c) => c || "").join("");
+    onHandChange(handStr || null);
     setShowPicker(null);
   };
 
@@ -70,20 +81,22 @@ export default function PlayerSlot({
           {equity != null && (
             <span className="text-sm font-bold text-white">{equity.toFixed(1)}%</span>
           )}
-          <div className="flex rounded-md overflow-hidden border border-gray-700">
-            <button
-              onClick={() => { onModeChange("hand"); onRangeChange(""); }}
-              className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "hand" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
-            >
-              Hand
-            </button>
-            <button
-              onClick={() => { onModeChange("range"); onHandChange(null); }}
-              className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "range" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
-            >
-              Range
-            </button>
-          </div>
+          {!disableRange && (
+            <div className="flex rounded-md overflow-hidden border border-gray-700">
+              <button
+                onClick={() => { onModeChange("hand"); onRangeChange(""); }}
+                className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "hand" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
+              >
+                Hand
+              </button>
+              <button
+                onClick={() => { onModeChange("range"); onHandChange(null); }}
+                className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "range" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
+              >
+                Range
+              </button>
+            </div>
+          )}
           {onRemove && (
             <button onClick={onRemove} className="text-gray-500 hover:text-red-400 text-xs cursor-pointer">
               &times;
@@ -93,51 +106,31 @@ export default function PlayerSlot({
       </div>
 
       {mode === "hand" ? (
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            {card1 ? (
-              <button onClick={() => setShowPicker(0)} className="cursor-pointer">
-                <MiniCard card={card1} />
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowPicker(0)}
-                className="px-3 py-1 border border-dashed border-gray-600 rounded text-xs text-gray-500
-                           hover:border-gray-400 cursor-pointer"
-              >
-                Card 1
-              </button>
-            )}
-            {showPicker === 0 && (
-              <CardSelector
-                onSelect={(c) => handleCardSelect(0, c)}
-                deadCards={deadCards}
-                onClose={() => setShowPicker(null)}
-              />
-            )}
-          </div>
-          <div className="relative">
-            {card2 ? (
-              <button onClick={() => setShowPicker(1)} className="cursor-pointer">
-                <MiniCard card={card2} />
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowPicker(1)}
-                className="px-3 py-1 border border-dashed border-gray-600 rounded text-xs text-gray-500
-                           hover:border-gray-400 cursor-pointer"
-              >
-                Card 2
-              </button>
-            )}
-            {showPicker === 1 && (
-              <CardSelector
-                onSelect={(c) => handleCardSelect(1, c)}
-                deadCards={deadCards}
-                onClose={() => setShowPicker(null)}
-              />
-            )}
-          </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {cards.map((card, slot) => (
+            <div key={slot} className="relative">
+              {card ? (
+                <button onClick={() => setShowPicker(showPicker === slot ? null : slot)} className="cursor-pointer">
+                  <MiniCard card={card} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowPicker(showPicker === slot ? null : slot)}
+                  className="px-3 py-1 border border-dashed border-gray-600 rounded text-xs text-gray-500
+                             hover:border-gray-400 cursor-pointer"
+                >
+                  Card {slot + 1}
+                </button>
+              )}
+              {showPicker === slot && (
+                <CardSelector
+                  onSelect={(c) => handleCardSelect(slot, c)}
+                  deadCards={deadCards}
+                  onClose={() => setShowPicker(null)}
+                />
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <input

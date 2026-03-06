@@ -6,6 +6,22 @@ import PlayerSlot from "@/components/solver/PlayerSlot";
 import EquityResults from "@/components/solver/EquityResults";
 import { calculateEquity, type EquityResponse, type PlayerInput } from "@/lib/api";
 
+type Format = "nlhe" | "plo4" | "plo5" | "plo6";
+
+const FORMAT_HOLE_CARDS: Record<Format, number> = {
+  nlhe: 2,
+  plo4: 4,
+  plo5: 5,
+  plo6: 6,
+};
+
+const FORMAT_LABELS: Record<Format, string> = {
+  nlhe: "NLHE",
+  plo4: "PLO4",
+  plo5: "PLO5",
+  plo6: "PLO6",
+};
+
 interface PlayerState {
   mode: "hand" | "range";
   hand: string | null;
@@ -26,13 +42,16 @@ export default function CalculatorPage() {
     { mode: "hand", hand: null, range: "" },
   ]);
   const [board, setBoard] = useState<(string | null)[]>([null, null, null, null, null]);
-  const [format, setFormat] = useState<"nlhe" | "plo">("nlhe");
+  const [format, setFormat] = useState<Format>("nlhe");
   const [result, setResult] = useState<EquityResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shared, setShared] = useState(false);
 
-  // Collect all "dead" cards (already used)
+  const holeCards = FORMAT_HOLE_CARDS[format];
+  const isPlo = format !== "nlhe";
+
+  // Collect all "dead" cards
   const deadCards = useMemo(() => {
     const dead = new Set<string>();
     for (const card of board) {
@@ -40,12 +59,23 @@ export default function CalculatorPage() {
     }
     for (const p of players) {
       if (p.mode === "hand" && p.hand) {
-        if (p.hand.length >= 2) dead.add(p.hand.slice(0, 2));
-        if (p.hand.length >= 4) dead.add(p.hand.slice(2, 4));
+        for (let i = 0; i < p.hand.length; i += 2) {
+          if (i + 2 <= p.hand.length) {
+            dead.add(p.hand.slice(i, i + 2));
+          }
+        }
       }
     }
     return dead;
   }, [players, board]);
+
+  const handleFormatChange = useCallback((newFormat: Format) => {
+    setFormat(newFormat);
+    // Reset hands when switching formats (different card count)
+    setPlayers((prev) => prev.map((p) => ({ ...p, hand: null, range: "" })));
+    setResult(null);
+    setError(null);
+  }, []);
 
   const updatePlayer = useCallback((idx: number, updates: Partial<PlayerState>) => {
     setPlayers((prev) => prev.map((p, i) => (i === idx ? { ...p, ...updates } : p)));
@@ -66,8 +96,9 @@ export default function CalculatorPage() {
     }
   }, [players.length]);
 
+  const expectedHandLen = holeCards * 2;
   const canCalculate = players.every((p) => {
-    if (p.mode === "hand") return p.hand && p.hand.length === 4;
+    if (p.mode === "hand") return p.hand && p.hand.length === expectedHandLen;
     return p.range.trim().length > 0;
   });
 
@@ -128,21 +159,24 @@ export default function CalculatorPage() {
 
         {/* Format selector */}
         <div className="flex items-center gap-2 mb-6">
-          <button
-            onClick={() => setFormat("nlhe")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md cursor-pointer transition-colors ${
-              format === "nlhe" ? "bg-primary text-black" : "bg-gray-800 text-gray-400 hover:text-white"
-            }`}
-          >
-            NLHE
-          </button>
-          <button
-            disabled
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800/50 text-gray-600 cursor-not-allowed"
-            title="Coming in Phase 5"
-          >
-            PLO (coming soon)
-          </button>
+          {(["nlhe", "plo4", "plo5", "plo6"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => handleFormatChange(f)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md cursor-pointer transition-colors ${
+                format === f
+                  ? "bg-primary text-black"
+                  : "bg-gray-800 text-gray-400 hover:text-white"
+              }`}
+            >
+              {FORMAT_LABELS[f]}
+            </button>
+          ))}
+          {isPlo && (
+            <span className="text-[10px] text-gray-500 ml-2">
+              {holeCards} hole cards &middot; Must use exactly 2
+            </span>
+          )}
         </div>
 
         {/* Board */}
@@ -158,17 +192,19 @@ export default function CalculatorPage() {
         <div className="space-y-3 mb-6">
           {players.map((p, idx) => (
             <PlayerSlot
-              key={idx}
+              key={`${format}-${idx}`}
               index={idx}
               hand={p.hand}
               range={p.range}
-              mode={p.mode}
+              mode={isPlo ? "hand" : p.mode}
               onModeChange={(mode) => updatePlayer(idx, { mode })}
               onHandChange={(hand) => updatePlayer(idx, { hand })}
               onRangeChange={(range) => updatePlayer(idx, { range })}
               onRemove={players.length > 2 ? () => removePlayer(idx) : undefined}
               deadCards={deadCards}
               equity={result?.players[idx]?.equity ?? null}
+              holeCards={holeCards}
+              disableRange={isPlo}
             />
           ))}
 

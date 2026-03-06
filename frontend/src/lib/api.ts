@@ -39,7 +39,7 @@ export interface PlayerResult {
 export interface EquityRequest {
   players: PlayerInput[];
   board?: string[];  // e.g. ["Ah", "Kd", "2c"]
-  format?: "nlhe" | "plo";
+  format?: "nlhe" | "plo4" | "plo5" | "plo6";
   iterations?: number;
 }
 

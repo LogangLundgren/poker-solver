@@ -17,17 +17,20 @@ def card_int_to_str(card: int) -> str:
     return Card.int_to_str(card)
 
 
-def parse_hand(hand_str: str) -> list[int]:
-    """Parse a hand string like 'AhKs' into a list of treys card ints.
+def parse_hand(hand_str: str, num_cards: int = 2) -> list[int]:
+    """Parse a hand string into a list of treys card ints.
 
-    The input should be exactly 4 characters: two 2-char card tokens.
+    Args:
+        hand_str: Card string, e.g. 'AhKs' (2 cards) or 'AhKsQdJc' (4 cards)
+        num_cards: Expected number of cards (2 for NLHE, 4/5/6 for PLO)
     """
-    if len(hand_str) != 4:
-        raise ValueError(f"Hand string must be exactly 4 characters, got '{hand_str}'")
-    return [
-        card_str_to_int(hand_str[0:2]),
-        card_str_to_int(hand_str[2:4]),
-    ]
+    expected_len = num_cards * 2
+    if len(hand_str) != expected_len:
+        raise ValueError(
+            f"Hand string must be exactly {expected_len} characters for {num_cards} cards, "
+            f"got '{hand_str}' ({len(hand_str)} chars)"
+        )
+    return [card_str_to_int(hand_str[i:i+2]) for i in range(0, expected_len, 2)]
 
 
 def parse_board(board: list[str]) -> list[int]:
