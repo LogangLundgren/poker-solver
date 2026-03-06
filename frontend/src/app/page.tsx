@@ -24,11 +24,17 @@ export default function Home() {
     <main className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
       <div className="text-center space-y-4">
         <h1 className="text-5xl font-bold">Poker Solver</h1>
-        <p className="text-gray-400 text-xl">Equity calculator — coming soon</p>
+        <p className="text-gray-400 text-xl">Real-time poker equity calculator</p>
         <div className="flex gap-3 justify-center mt-2">
           <a
-            href="/range-builder"
+            href="/calculator"
             className="px-4 py-2 bg-primary text-black font-medium rounded-md hover:bg-primary/80 transition-colors text-sm"
+          >
+            Equity Calculator
+          </a>
+          <a
+            href="/range-builder"
+            className="px-4 py-2 bg-gray-800 border border-gray-700 text-gray-300 font-medium rounded-md hover:text-white transition-colors text-sm"
           >
             Range Builder
           </a>
