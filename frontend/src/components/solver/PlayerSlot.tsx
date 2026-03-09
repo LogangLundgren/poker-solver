@@ -1,14 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PlayingCardFace, EmptyCardSlot } from "./PlayingCard";
 import CardSelector from "./CardSelector";
 
-const SUIT_SYMBOLS: Record<string, { symbol: string; color: string }> = {
-  h: { symbol: "\u2665", color: "text-red-500" },
-  d: { symbol: "\u2666", color: "text-blue-400" },
-  c: { symbol: "\u2663", color: "text-green-400" },
-  s: { symbol: "\u2660", color: "text-gray-300" },
-};
+const PLAYER_ACCENTS = [
+  "border-blue-500/20 bg-blue-500/[0.02]",
+  "border-red-500/20 bg-red-500/[0.02]",
+  "border-amber-500/20 bg-amber-500/[0.02]",
+  "border-purple-500/20 bg-purple-500/[0.02]",
+  "border-pink-500/20 bg-pink-500/[0.02]",
+  "border-cyan-500/20 bg-cyan-500/[0.02]",
+];
+
+const PLAYER_COLORS = [
+  { dot: "bg-blue-400", text: "text-blue-400" },
+  { dot: "bg-red-400", text: "text-red-400" },
+  { dot: "bg-amber-400", text: "text-amber-400" },
+  { dot: "bg-purple-400", text: "text-purple-400" },
+  { dot: "bg-pink-400", text: "text-pink-400" },
+  { dot: "bg-cyan-400", text: "text-cyan-400" },
+];
 
 interface PlayerSlotProps {
   index: number;
@@ -25,26 +39,14 @@ interface PlayerSlotProps {
   disableRange?: boolean;
 }
 
-function MiniCard({ card }: { card: string }) {
-  const rank = card[0];
-  const suit = card[1];
-  const suitInfo = SUIT_SYMBOLS[suit];
-  return (
-    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-white rounded text-xs font-bold">
-      <span className="text-gray-900">{rank}</span>
-      <span className={suitInfo.color}>{suitInfo.symbol}</span>
-    </span>
-  );
-}
-
 export default function PlayerSlot({
   index, hand, range, mode, onModeChange, onHandChange,
   onRangeChange, onRemove, deadCards, equity,
   holeCards = 2, disableRange = false,
 }: PlayerSlotProps) {
   const [showPicker, setShowPicker] = useState<number | null>(null);
+  const colors = PLAYER_COLORS[index % 6];
 
-  // Parse existing cards from hand string
   const cards: (string | null)[] = [];
   for (let i = 0; i < holeCards; i++) {
     const start = i * 2;
@@ -58,69 +60,85 @@ export default function PlayerSlot({
   const handleCardSelect = (slot: number, card: string) => {
     const newCards = [...cards];
     newCards[slot] = card;
-    // Build hand string from all non-null cards in order
     const handStr = newCards.map((c) => c || "").join("");
     onHandChange(handStr || null);
     setShowPicker(null);
   };
 
-  const colors = [
-    "border-blue-500/50 bg-blue-500/5",
-    "border-red-500/50 bg-red-500/5",
-    "border-yellow-500/50 bg-yellow-500/5",
-    "border-purple-500/50 bg-purple-500/5",
-    "border-pink-500/50 bg-pink-500/5",
-    "border-cyan-500/50 bg-cyan-500/5",
-  ];
-
   return (
-    <div className={`border rounded-lg p-3 ${colors[index % 6]}`}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-300">Player {index + 1}</span>
-        <div className="flex items-center gap-2">
+    <div className={cn("glass-panel border p-4 animate-fade-in-up", PLAYER_ACCENTS[index % 6])}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot)} />
+          <span className="text-sm font-medium text-gray-300">Player {index + 1}</span>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {/* Equity display */}
           {equity != null && (
-            <span className="text-sm font-bold text-white">{equity.toFixed(1)}%</span>
+            <div className="animate-count-up">
+              <span className={cn("text-xl font-bold tabular-nums", colors.text)}>
+                {equity.toFixed(1)}
+              </span>
+              <span className="text-xs text-gray-500 ml-0.5">%</span>
+            </div>
           )}
+
+          {/* Mode toggle */}
           {!disableRange && (
-            <div className="flex rounded-md overflow-hidden border border-gray-700">
+            <div className="flex rounded-lg overflow-hidden border border-white/[0.08] bg-white/[0.02]">
               <button
                 onClick={() => { onModeChange("hand"); onRangeChange(""); }}
-                className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "hand" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
+                className={cn(
+                  "px-2.5 py-1 text-[10px] font-medium cursor-pointer transition-all",
+                  mode === "hand" ? "bg-white/[0.1] text-white" : "text-gray-500 hover:text-gray-300"
+                )}
               >
                 Hand
               </button>
               <button
                 onClick={() => { onModeChange("range"); onHandChange(null); }}
-                className={`px-2 py-0.5 text-[10px] cursor-pointer ${mode === "range" ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}
+                className={cn(
+                  "px-2.5 py-1 text-[10px] font-medium cursor-pointer transition-all",
+                  mode === "range" ? "bg-white/[0.1] text-white" : "text-gray-500 hover:text-gray-300"
+                )}
               >
                 Range
               </button>
             </div>
           )}
+
+          {/* Remove */}
           {onRemove && (
-            <button onClick={onRemove} className="text-gray-500 hover:text-red-400 text-xs cursor-pointer">
-              &times;
+            <button
+              onClick={onRemove}
+              className="w-6 h-6 flex items-center justify-center rounded-md
+                         text-gray-600 hover:text-red-400 hover:bg-red-500/10
+                         transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
       </div>
 
+      {/* Cards / Range Input */}
       {mode === "hand" ? (
         <div className="flex items-center gap-2 flex-wrap">
           {cards.map((card, slot) => (
             <div key={slot} className="relative">
               {card ? (
-                <button onClick={() => setShowPicker(showPicker === slot ? null : slot)} className="cursor-pointer">
-                  <MiniCard card={card} />
-                </button>
-              ) : (
-                <button
+                <PlayingCardFace
+                  card={card}
+                  size="sm"
                   onClick={() => setShowPicker(showPicker === slot ? null : slot)}
-                  className="px-3 py-1 border border-dashed border-gray-600 rounded text-xs text-gray-500
-                             hover:border-gray-400 cursor-pointer"
-                >
-                  Card {slot + 1}
-                </button>
+                />
+              ) : (
+                <EmptyCardSlot
+                  size="sm"
+                  onClick={() => setShowPicker(showPicker === slot ? null : slot)}
+                />
               )}
               {showPicker === slot && (
                 <CardSelector
@@ -138,8 +156,7 @@ export default function PlayerSlot({
           value={range}
           onChange={(e) => onRangeChange(e.target.value)}
           placeholder="e.g. JJ+,AKs"
-          className="w-full px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs
-                     text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+          className="input-field"
         />
       )}
     </div>

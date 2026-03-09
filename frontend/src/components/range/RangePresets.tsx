@@ -13,9 +13,9 @@ export default function RangePresets({ onSelect }: RangePresetsProps) {
         <button
           key={preset.name}
           onClick={() => onSelect(preset.range)}
-          className="px-3 py-1.5 text-xs font-medium bg-gray-800 border border-gray-700
-                     rounded-md text-gray-300 hover:bg-gray-700 hover:text-white
-                     transition-colors cursor-pointer"
+          className="px-3 py-1.5 text-xs font-medium bg-white/[0.04] border border-white/[0.06]
+                     rounded-lg text-gray-400 hover:bg-white/[0.08] hover:text-white
+                     transition-all duration-150 cursor-pointer"
         >
           {preset.name}
         </button>

@@ -36,8 +36,8 @@ export default function RangeSaveLoad({ selected, onLoad }: RangeSaveLoadProps) 
         <button
           onClick={() => setShowSave(!showSave)}
           disabled={selected.size === 0}
-          className="px-3 py-1.5 text-xs font-medium bg-primary/20 border border-primary/30
-                     rounded-md text-primary hover:bg-primary/30 transition-colors
+          className="px-3 py-1.5 text-xs font-medium bg-primary/10 border border-primary/20
+                     rounded-lg text-primary hover:bg-primary/20 transition-all duration-150
                      disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         >
           Save Range
@@ -52,14 +52,12 @@ export default function RangeSaveLoad({ selected, onLoad }: RangeSaveLoadProps) 
             onChange={(e) => setSaveName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
             placeholder="Range name..."
-            className="flex-1 px-3 py-1.5 text-xs bg-gray-800 border border-gray-700
-                       rounded-md text-white placeholder-gray-500 focus:outline-none
-                       focus:border-primary"
+            className="flex-1 input-field text-xs py-1.5"
           />
           <button
             onClick={handleSave}
-            className="px-3 py-1.5 text-xs font-medium bg-primary text-black
-                       rounded-md hover:bg-primary/80 cursor-pointer"
+            className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground
+                       rounded-lg hover:brightness-110 transition-all duration-150 cursor-pointer"
           >
             Save
           </button>
@@ -68,7 +66,7 @@ export default function RangeSaveLoad({ selected, onLoad }: RangeSaveLoadProps) 
 
       {savedRanges.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-gray-500">Saved Ranges</p>
+          <p className="text-[10px] uppercase tracking-wider text-gray-500 font-medium">Saved Ranges</p>
           {savedRanges.map((r) => (
             <div key={r.name} className="flex items-center justify-between gap-2 py-1">
               <button

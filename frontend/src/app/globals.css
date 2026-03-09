@@ -4,22 +4,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 98%;
+    --background: 240 10% 4%;
+    --foreground: 0 0% 95%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 95%;
+    --popover: 240 10% 5%;
+    --popover-foreground: 0 0% 95%;
     --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 240 6% 12%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 240 6% 12%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 240 6% 12%;
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 240 6% 14%;
+    --input: 240 6% 14%;
     --ring: 142 71% 45%;
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    --suit-hearts: #ef4444;
+    --suit-diamonds: #3b82f6;
+    --suit-clubs: #22c55e;
+    --suit-spades: #94a3b8;
   }
 }
 
@@ -28,6 +37,197 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+}
+
+/* ═══════════════════════════════════════════
+   COMPONENT CLASSES
+   ═══════════════════════════════════════════ */
+
+@layer components {
+  /* ─── Glass Panels ─── */
+  .glass-panel {
+    @apply bg-[hsl(240_10%_7%)] border border-white/[0.06] rounded-2xl;
+  }
+  .glass-panel-elevated {
+    @apply bg-[hsl(240_10%_8%)] border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/40;
+  }
+
+  /* ─── Feature Cards ─── */
+  .feature-card {
+    @apply relative overflow-hidden bg-[hsl(240_10%_7%)] border border-white/[0.06] rounded-2xl
+           p-6 transition-all duration-300 ease-out cursor-pointer;
+  }
+  .feature-card:hover {
+    @apply border-white/[0.12] bg-[hsl(240_10%_9%)];
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 60px rgba(34,197,94,0.04);
+  }
+  .feature-card::before {
+    content: "";
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(34,197,94,0.06), transparent 40%);
+  }
+  .feature-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* ─── Playing Cards ─── */
+  .playing-card-classic {
+    @apply relative bg-white rounded-lg border border-gray-200/80 select-none
+           transition-all duration-150 cursor-pointer overflow-hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1);
+  }
+  .playing-card-classic:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25), 0 2px 4px rgba(0,0,0,0.15);
+  }
+
+  .card-slot-empty {
+    @apply rounded-lg border-2 border-dashed border-white/[0.1]
+           flex flex-col items-center justify-center gap-1
+           bg-white/[0.02] text-white/20
+           hover:border-primary/40 hover:bg-primary/[0.04] hover:text-primary/50
+           transition-all duration-200 cursor-pointer;
+  }
+
+  .card-grid-btn {
+    @apply w-8 h-10 text-[11px] font-bold rounded-md
+           flex flex-col items-center justify-center gap-0
+           transition-all duration-100 cursor-pointer select-none;
+  }
+  .card-grid-btn:not(:disabled) {
+    @apply bg-white border border-gray-200 shadow-sm
+           hover:shadow-md hover:-translate-y-px hover:border-gray-300;
+  }
+  .card-grid-btn:disabled {
+    @apply bg-gray-800/40 border border-gray-700/30 text-gray-700 cursor-not-allowed opacity-30;
+  }
+
+  /* ─── Buttons ─── */
+  .btn-primary {
+    @apply px-6 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl
+           shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:shadow-xl
+           hover:brightness-110 active:scale-[0.98]
+           transition-all duration-200 cursor-pointer text-sm
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none disabled:active:scale-100;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 bg-white/[0.05] border border-white/[0.08] text-gray-300
+           rounded-xl hover:bg-white/[0.08] hover:border-white/[0.12] hover:text-white active:scale-[0.98]
+           transition-all duration-200 cursor-pointer text-sm
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-3 py-1.5 text-xs font-medium text-gray-400
+           hover:text-white hover:bg-white/[0.06]
+           rounded-lg transition-all duration-150 cursor-pointer;
+  }
+
+  /* ─── Navigation ─── */
+  .nav-link {
+    @apply relative px-3 py-2 text-sm font-medium text-gray-500 flex items-center gap-2
+           hover:text-white rounded-lg transition-all duration-200;
+  }
+  .nav-link-active {
+    @apply text-white;
+  }
+  .nav-link-active::after {
+    content: "";
+    @apply absolute -bottom-[13px] left-1/2 -translate-x-1/2 w-5 h-0.5 bg-primary rounded-full;
+  }
+
+  /* ─── Inputs ─── */
+  .input-field {
+    @apply w-full px-4 py-2.5 bg-white/[0.04] border border-white/[0.08]
+           rounded-xl text-white text-sm placeholder-gray-600
+           focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20
+           transition-all duration-200;
+  }
+
+  /* ─── Section Labels ─── */
+  .section-label {
+    @apply text-[11px] uppercase tracking-[0.12em] text-gray-500 font-semibold;
+  }
+
+  /* ─── Suit Colors ─── */
+  .suit-hearts { color: var(--suit-hearts); }
+  .suit-diamonds { color: var(--suit-diamonds); }
+  .suit-clubs { color: var(--suit-clubs); }
+  .suit-spades { color: var(--suit-spades); }
+
+  /* ─── Stat Card ─── */
+  .stat-card {
+    @apply flex flex-col items-center justify-center px-4 py-3
+           bg-white/[0.03] border border-white/[0.06] rounded-xl;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════════ */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+
+@keyframes barGrow { from { width: 0; } }
+.animate-bar-grow { animation: barGrow 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count-up { animation: countUp 0.4s ease-out forwards; }
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fadeInUp 0.35s ease-out forwards; }
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted) / 0.5) 50%, hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float { animation: float 4s ease-in-out infinite; }
+
+/* ═══════════════════════════════════════════
+   GLOW EFFECTS
+   ═══════════════════════════════════════════ */
+
+.glow-green {
+  background: radial-gradient(ellipse at 50% 0%, rgba(34,197,94,0.12) 0%, transparent 60%);
+}
+.glow-blue {
+  background: radial-gradient(ellipse at 80% 20%, rgba(59,130,246,0.08) 0%, transparent 50%);
+}
+.glow-green-sm {
+  background: radial-gradient(circle at 50% 50%, rgba(34,197,94,0.08) 0%, transparent 70%);
 }

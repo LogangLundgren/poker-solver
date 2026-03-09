@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useRef, useCallback } from "react";
+import { X } from "lucide-react";
+
 const RANKS = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 const SUITS = [
-  { char: "h", symbol: "\u2665", color: "text-red-500" },
-  { char: "d", symbol: "\u2666", color: "text-blue-400" },
-  { char: "c", symbol: "\u2663", color: "text-green-400" },
-  { char: "s", symbol: "\u2660", color: "text-gray-300" },
+  { char: "h", symbol: "\u2665", cls: "suit-hearts" },
+  { char: "d", symbol: "\u2666", cls: "suit-diamonds" },
+  { char: "c", symbol: "\u2663", cls: "suit-clubs" },
+  { char: "s", symbol: "\u2660", cls: "suit-spades" },
 ];
 
 interface CardSelectorProps {
@@ -15,18 +18,43 @@ interface CardSelectorProps {
 }
 
 export default function CardSelector({ onSelect, deadCards, onClose }: CardSelectorProps) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
+
   return (
-    <div className="absolute z-50 mt-1 bg-gray-900 border border-gray-700 rounded-lg shadow-xl p-3">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-gray-400">Select a card</span>
+    <div
+      ref={ref}
+      className="absolute z-50 mt-2 glass-panel-elevated p-3 animate-fade-in-up"
+    >
+      <div className="flex items-center justify-between mb-2.5 px-0.5">
+        <span className="section-label">Pick a card</span>
         <button
           onClick={onClose}
-          className="text-gray-500 hover:text-white text-xs cursor-pointer"
+          className="w-5 h-5 flex items-center justify-center rounded-md text-gray-500
+                     hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
         >
-          &times;
+          <X className="w-3 h-3" />
         </button>
       </div>
-      <div className="grid grid-cols-13 gap-[2px]">
+
+      {/* Suit labels */}
+      <div className="grid grid-cols-13 gap-[3px]">
         {SUITS.map((suit) =>
           RANKS.map((rank) => {
             const card = `${rank}${suit.char}`;
@@ -35,18 +63,15 @@ export default function CardSelector({ onSelect, deadCards, onClose }: CardSelec
               <button
                 key={card}
                 disabled={dead}
-                onClick={() => { onSelect(card); onClose(); }}
-                className={`
-                  w-7 h-9 text-[10px] font-bold rounded border flex flex-col items-center justify-center
-                  transition-colors cursor-pointer
-                  ${dead
-                    ? "bg-gray-800/30 border-gray-800 text-gray-700 cursor-not-allowed"
-                    : "bg-gray-800 border-gray-700 hover:bg-gray-700 hover:border-gray-500"
-                  }
-                `}
+                onClick={() => onSelect(card)}
+                className="card-grid-btn"
               >
-                <span className={dead ? "text-gray-700" : "text-white"}>{rank}</span>
-                <span className={dead ? "text-gray-700" : suit.color}>{suit.symbol}</span>
+                <span className={dead ? "text-gray-700" : "text-gray-800 text-[11px]"}>
+                  {rank}
+                </span>
+                <span className={dead ? "text-gray-700" : `${suit.cls} text-[10px] leading-none`}>
+                  {suit.symbol}
+                </span>
               </button>
             );
           })

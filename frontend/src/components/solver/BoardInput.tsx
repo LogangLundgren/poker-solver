@@ -1,14 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import { PlayingCardFace, EmptyCardSlot } from "./PlayingCard";
 import CardSelector from "./CardSelector";
-
-const SUIT_SYMBOLS: Record<string, { symbol: string; color: string }> = {
-  h: { symbol: "\u2665", color: "text-red-500" },
-  d: { symbol: "\u2666", color: "text-blue-400" },
-  c: { symbol: "\u2663", color: "text-green-400" },
-  s: { symbol: "\u2660", color: "text-gray-300" },
-};
 
 interface BoardInputProps {
   board: (string | null)[];
@@ -16,52 +11,33 @@ interface BoardInputProps {
   deadCards: Set<string>;
 }
 
-function CardDisplay({ card, onClick, onRemove, label }: {
+function BoardCardSlot({ card, onClick, onRemove, label }: {
   card: string | null;
   onClick: () => void;
   onRemove: () => void;
   label: string;
 }) {
   if (card) {
-    const rank = card[0];
-    const suit = card[1];
-    const suitInfo = SUIT_SYMBOLS[suit];
     return (
       <div className="relative group">
-        <button
-          onClick={onClick}
-          className="w-12 h-16 bg-white rounded-md border-2 border-gray-300 flex flex-col items-center
-                     justify-center shadow-sm hover:border-primary transition-colors cursor-pointer"
-        >
-          <span className="text-sm font-bold text-gray-900">{rank}</span>
-          <span className={`text-lg ${suitInfo.color}`}>{suitInfo.symbol}</span>
-        </button>
+        <PlayingCardFace card={card} size="md" onClick={onClick} />
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full text-[10px]
-                     text-white items-center justify-center hidden group-hover:flex cursor-pointer"
+          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full
+                     text-white items-center justify-center hidden group-hover:flex cursor-pointer
+                     shadow-lg shadow-red-500/30 hover:bg-red-400 transition-colors"
         >
-          &times;
+          <Trash2 className="w-2.5 h-2.5" />
         </button>
       </div>
     );
   }
-  return (
-    <button
-      onClick={onClick}
-      className="w-12 h-16 border-2 border-dashed border-gray-700 rounded-md flex items-center
-                 justify-center text-gray-600 hover:border-gray-500 hover:text-gray-400
-                 transition-colors cursor-pointer"
-    >
-      <span className="text-[10px]">{label}</span>
-    </button>
-  );
+  return <EmptyCardSlot label={label} size="md" onClick={onClick} />;
 }
 
 export default function BoardInput({ board, onBoardChange, deadCards }: BoardInputProps) {
   const [openSlot, setOpenSlot] = useState<number | null>(null);
-
-  const labels = ["Flop", "Flop", "Flop", "Turn", "River"];
+  const nextEmpty = board.findIndex((c) => c === null);
 
   const handleSelect = (idx: number, card: string) => {
     const newBoard = [...board];
@@ -72,45 +48,87 @@ export default function BoardInput({ board, onBoardChange, deadCards }: BoardInp
 
   const handleRemove = (idx: number) => {
     const newBoard = [...board];
-    // Remove this and all cards after it
     for (let i = idx; i < 5; i++) newBoard[i] = null;
     onBoardChange(newBoard);
   };
 
-  // Only allow selecting the next empty slot in order
-  const nextEmpty = board.findIndex((c) => c === null);
+  const toggleSlot = (idx: number, card: string | null) => {
+    if (card || idx === nextEmpty) setOpenSlot(openSlot === idx ? null : idx);
+  };
 
   return (
-    <div>
-      <label className="block text-sm text-gray-400 mb-2">Board</label>
-      <div className="flex items-center gap-2">
-        {board.map((card, idx) => (
-          <div key={idx} className="relative">
-            <CardDisplay
-              card={card}
-              onClick={() => {
-                if (card || idx === nextEmpty) setOpenSlot(openSlot === idx ? null : idx);
-              }}
-              onRemove={() => handleRemove(idx)}
-              label={labels[idx]}
-            />
-            {openSlot === idx && (
-              <CardSelector
-                onSelect={(c) => handleSelect(idx, c)}
-                deadCards={deadCards}
-                onClose={() => setOpenSlot(null)}
-              />
-            )}
-          </div>
-        ))}
+    <div className="glass-panel p-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="section-label">Community Cards</span>
         {board.some((c) => c !== null) && (
           <button
             onClick={() => onBoardChange([null, null, null, null, null])}
-            className="text-xs text-gray-500 hover:text-gray-300 ml-2 cursor-pointer"
+            className="btn-ghost text-[10px]"
           >
             Clear
           </button>
         )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {/* Flop */}
+        <div className="flex gap-1.5">
+          {board.slice(0, 3).map((card, idx) => (
+            <div key={idx} className="relative">
+              <BoardCardSlot
+                card={card}
+                onClick={() => toggleSlot(idx, card)}
+                onRemove={() => handleRemove(idx)}
+                label="Flop"
+              />
+              {openSlot === idx && (
+                <CardSelector
+                  onSelect={(c) => handleSelect(idx, c)}
+                  deadCards={deadCards}
+                  onClose={() => setOpenSlot(null)}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="w-px h-12 bg-white/[0.06] mx-1" />
+
+        {/* Turn */}
+        <div className="relative">
+          <BoardCardSlot
+            card={board[3]}
+            onClick={() => toggleSlot(3, board[3])}
+            onRemove={() => handleRemove(3)}
+            label="Turn"
+          />
+          {openSlot === 3 && (
+            <CardSelector
+              onSelect={(c) => handleSelect(3, c)}
+              deadCards={deadCards}
+              onClose={() => setOpenSlot(null)}
+            />
+          )}
+        </div>
+
+        <div className="w-px h-12 bg-white/[0.06] mx-1" />
+
+        {/* River */}
+        <div className="relative">
+          <BoardCardSlot
+            card={board[4]}
+            onClick={() => toggleSlot(4, board[4])}
+            onRemove={() => handleRemove(4)}
+            label="River"
+          />
+          {openSlot === 4 && (
+            <CardSelector
+              onSelect={(c) => handleSelect(4, c)}
+              deadCards={deadCards}
+              onClose={() => setOpenSlot(null)}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

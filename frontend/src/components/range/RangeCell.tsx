@@ -10,16 +10,16 @@ interface RangeCellProps {
 
 const typeColors = {
   pair: {
-    base: "bg-blue-900/40 border-blue-700/50",
-    selected: "bg-blue-600 border-blue-400",
+    base: "bg-blue-900/30 border-blue-800/30",
+    selected: "bg-blue-600/90 border-blue-400/60 shadow-sm shadow-blue-500/10",
   },
   suited: {
-    base: "bg-red-900/30 border-red-700/40",
-    selected: "bg-red-600 border-red-400",
+    base: "bg-rose-900/20 border-rose-800/20",
+    selected: "bg-rose-600/90 border-rose-400/60 shadow-sm shadow-rose-500/10",
   },
   offsuit: {
-    base: "bg-green-900/30 border-green-700/40",
-    selected: "bg-green-600 border-green-400",
+    base: "bg-emerald-900/20 border-emerald-800/20",
+    selected: "bg-emerald-600/90 border-emerald-400/60 shadow-sm shadow-emerald-500/10",
   },
 };
 
@@ -32,10 +32,10 @@ export default function RangeCell({ cell, selected, onToggle }: RangeCellProps) 
       onClick={() => onToggle(cell.label)}
       className={`
         aspect-square w-full border text-[10px] sm:text-xs font-medium
-        rounded-sm transition-colors duration-100 cursor-pointer
-        hover:brightness-125 flex items-center justify-center
+        rounded transition-all duration-100 cursor-pointer
+        hover:brightness-125 hover:scale-105 flex items-center justify-center
         ${style}
-        ${selected ? "text-white" : "text-gray-400"}
+        ${selected ? "text-white font-semibold" : "text-gray-500 hover:text-gray-300"}
       `}
       title={`${cell.label} — ${cell.combos} combos`}
     >
